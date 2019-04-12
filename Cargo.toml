@@ -1,0 +1,14 @@
+[package]
+name = "stanley-rs"
+version = "0.1.0"
+authors = ["Clark Kampfe <clark.kampfe@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+glob = "0.3.0"
+handlebars = "2.0.0-beta.2"
+nom = "4.2.3"
+pulldown-cmark = "0.4.0"
+rss = "1.7.0"
+serde = "1.0.90"
+time = "0.1.42"
