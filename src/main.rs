@@ -1,42 +1,27 @@
 use glob::glob;
-use handlebars::Handlebars;
 use nom::*;
 use pulldown_cmark::html;
 use pulldown_cmark::Parser;
 use rss::{ChannelBuilder, ItemBuilder};
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
-
-#[derive(Clone, Copy, Debug)]
-enum Layout {
-    Post,
-    Page,
-}
-#[derive(Clone, Copy, Debug)]
-struct Prelude<'a> {
-    layout: Layout,
-    title: &'a str,
-    created_on: time::Tm,
-}
+use tera::{Context, Tera};
 
 #[derive(Clone, Debug)]
 struct Post<'a> {
-    prelude: Prelude<'a>,
+    title: &'a str,
+    created_on: time::Tm,
     body: String,
 }
 
 impl<'a> Post<'a> {
     fn new(title: &'a str, created_on: time::Tm, body: String) -> Self {
         Post {
-            prelude: Prelude {
-                layout: Layout::Post,
-                title: title,
-                created_on: created_on,
-            },
+            title: title,
+            created_on: created_on,
             body: body,
         }
     }
@@ -44,18 +29,16 @@ impl<'a> Post<'a> {
 
 #[derive(Clone, Debug)]
 struct Page<'a> {
-    prelude: Prelude<'a>,
+    title: &'a str,
+    created_on: time::Tm,
     body: String,
 }
 
 impl<'a> Page<'a> {
     fn new(title: &'a str, created_on: time::Tm, body: String) -> Self {
         Page {
-            prelude: Prelude {
-                layout: Layout::Page,
-                title: title,
-                created_on: created_on,
-            },
+            title: title,
+            created_on: created_on,
             body: body,
         }
     }
@@ -69,22 +52,30 @@ fn parse_md(markdown_str: &str) -> String {
 }
 
 named!(
+    title,
+    preceded!(
+        ws!(tag!("title:")),
+        terminated!(take_until!("\n"), line_ending)
+    )
+);
+
+named!(
+    created_on,
+    preceded!(
+        ws!(tag!("created:")),
+        terminated!(take_until!("\n"), line_ending)
+    )
+);
+
+named!(
     parse_post<Post>,
     do_parse!(
         tag!("---")
             >> line_ending
             >> tag!("layout: post")
             >> line_ending
-            >> title:
-                preceded!(
-                    ws!(tag!("title:")),
-                    terminated!(take_until!("\n"), line_ending)
-                )
-            >> created_on:
-                preceded!(
-                    ws!(tag!("created:")),
-                    terminated!(take_until!("\n"), line_ending)
-                )
+            >> title: title
+            >> created_on: created_on
             >> tag!("---")
             >> body: rest
             >> (Post::new(
@@ -100,16 +91,8 @@ named!(
     do_parse!(
         tag!("---")
             >> line_ending
-            >> title:
-                preceded!(
-                    ws!(tag!("title:")),
-                    terminated!(take_until!("\n"), line_ending)
-                )
-            >> created_on:
-                preceded!(
-                    ws!(tag!("created:")),
-                    terminated!(take_until!("\n"), line_ending)
-                )
+            >> title: title
+            >> created_on: created_on
             >> tag!("---")
             >> body: rest
             >> (Page::new(
@@ -119,8 +102,6 @@ named!(
             ))
     )
 );
-
-////////////////////////////////////////////////////////
 
 fn get_markdown_files(path: &Path) -> Result<glob::Paths, glob::PatternError> {
     let mdpath = path.join("**/*.md");
@@ -153,9 +134,9 @@ const INDEX_LINK: &str = r###"
 const INDEX: &str = r###"
 <div id="home">
   <ul class="posts">
-  {{#each post_links as |post_link| ~}}
+  {% for post_link in post_links %}
     {{post_link}}
-  {{/each}}
+  {% endfor %}
   </ul>
 </div>
 "###;
@@ -210,9 +191,9 @@ fn rss_feed() -> rss::Channel {
 
 fn rss_item(post: Post, link: &str) -> rss::Item {
     ItemBuilder::default()
-        .title(post.prelude.title.to_string())
+        .title(post.title.to_string())
         .link(link.to_owned())
-        .content(post.body.to_owned())
+        .content(post.body)
         .build()
         .unwrap()
 }
@@ -221,19 +202,15 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let cwd = env::current_dir()?;
     let build_dir = cwd.join("build");
 
-    // register templates
-    let mut reg = Handlebars::new();
-    reg.register_escape_fn(handlebars::no_escape);
-    reg.register_template_string("layout", &LAYOUT)?;
-    reg.register_template_string("index_link", &INDEX_LINK)?;
-    reg.register_template_string("index", &INDEX)?;
-    reg.register_template_string("post", &POST)?;
-    reg.register_template_string("page", &PAGE)?;
+    let mut reg = Tera::default();
+    reg.add_raw_template("layout", &LAYOUT)?;
+    reg.add_raw_template("index_link", &INDEX_LINK)?;
+    reg.add_raw_template("index", &INDEX)?;
+    reg.add_raw_template("post", &POST)?;
+    reg.add_raw_template("page", &PAGE)?;
 
-    // get posts
     let post_paths = get_markdown_files(&cwd.join("posts"))?;
 
-    // initialize collections
     let mut feed = rss_feed();
     let mut rss_items = vec![];
     let mut index_links = vec![];
@@ -253,25 +230,23 @@ fn main() -> Result<(), Box<std::error::Error>> {
         })
         .collect::<Vec<(&PathBuf, Post)>>();
 
-    // sort posts descending
-    paths_and_posts.sort_unstable_by(|a, b| b.1.prelude.created_on.cmp(&a.1.prelude.created_on));
+    paths_and_posts.sort_unstable_by(|a, b| b.1.created_on.cmp(&a.1.created_on));
 
     for (post_path, post) in paths_and_posts {
-        // create post HTML
-        let mut post_data = HashMap::new();
-        post_data.insert("title", post.prelude.title);
-        let post_created_on = time::strftime("%Y-%m-%d", &post.prelude.created_on)?;
+        let mut post_data = Context::new();
+        let mut layout_data = Context::new();
+        let mut index_link_data = Context::new();
+
+        let post_created_on = time::strftime("%Y-%m-%d", &post.created_on)?;
+        post_data.insert("title", post.title);
         post_data.insert("created", &post_created_on);
         post_data.insert("content", &post.body);
-        let post_html = reg.render("post", &post_data)?;
+        let post_html = reg.render("post", post_data)?;
 
-        // put post HTML in main layout HTML
-        let mut layout_data = HashMap::new();
-        layout_data.insert("title", post.prelude.title);
+        layout_data.insert("title", post.title);
         layout_data.insert("content", &post_html);
-        let post_layout_html = reg.render("layout", &layout_data)?;
+        let post_layout_html = reg.render("layout", layout_data)?;
 
-        // write post to fs
         let filename = post_path
             .file_name()
             .ok_or_else(|| "Could not make post path into str")?;
@@ -291,15 +266,13 @@ fn main() -> Result<(), Box<std::error::Error>> {
         let index_link_post_str = index_link_post_path
             .to_str()
             .ok_or_else(|| "Could not create filename from osstr")?;
-        let mut index_link_data = HashMap::new();
-        index_link_data.insert("title", post.prelude.title);
+        index_link_data.insert("title", post.title);
         index_link_data.insert("filename", index_link_post_str);
         index_link_data.insert("created_at", &post_created_on);
-        let index_link_html = reg.render("index_link", &index_link_data)?;
+        let index_link_html = reg.render("index_link", index_link_data)?;
 
         index_links.push(index_link_html);
 
-        // create rss entry for post
         let mut post_link = PathBuf::new();
         post_link.push("https://zeroclarkthirty.com");
         post_link.push(filename);
@@ -311,18 +284,16 @@ fn main() -> Result<(), Box<std::error::Error>> {
         rss_items.push(post_rss_item);
     }
 
-    // build index
-    let mut index_data = HashMap::new();
+    let mut index_data = Context::default();
 
     index_data.insert("post_links", &index_links);
-    let index_html = reg.render("index", &index_data)?;
+    let index_html = reg.render("index", index_data)?;
 
-    let mut layout_data = HashMap::new();
+    let mut layout_data = Context::default();
     layout_data.insert("title", "Clark Kampfe - zeroclarkthirty.com");
     layout_data.insert("content", &index_html);
-    let index_layout_html = reg.render("layout", &layout_data)?;
+    let index_layout_html = reg.render("layout", layout_data)?;
 
-    // write index to fs
     let mut index_output_path = PathBuf::new();
     index_output_path.push(&build_dir);
     index_output_path.push("index");
@@ -330,7 +301,6 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let mut index_output = fs::File::create(index_output_path)?;
     index_output.write_all(index_layout_html.as_bytes())?;
 
-    // write RSS stuff to fs
     feed.set_items(rss_items);
     let mut rss_feed_path = PathBuf::new();
     rss_feed_path.push(&build_dir);
@@ -346,18 +316,17 @@ fn main() -> Result<(), Box<std::error::Error>> {
         let contents = &fs::read(&pp)?;
         let (_, page) = parse_page(contents).unwrap();
 
-        let mut page_data = HashMap::new();
-        page_data.insert("title", page.prelude.title);
-        let page_created_on = time::strftime("%Y-%m-%d", &page.prelude.created_on)?;
+        let mut page_data = Context::default();
+        let page_created_on = time::strftime("%Y-%m-%d", &page.created_on)?;
+        page_data.insert("title", page.title);
         page_data.insert("created", &page_created_on);
         page_data.insert("content", &page.body);
-        let page_html = reg.render("page", &page_data)?;
+        let page_html = reg.render("page", page_data)?;
 
-        // put page HTML in main layout HTML
-        let mut layout_data = HashMap::new();
-        layout_data.insert("title", page.prelude.title);
+        let mut layout_data = Context::default();
+        layout_data.insert("title", page.title);
         layout_data.insert("content", &page_html);
-        let page_layout_html = reg.render("layout", &layout_data)?;
+        let page_layout_html = reg.render("layout", layout_data)?;
 
         let filename = pp
             .file_name()
