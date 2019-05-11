@@ -20,9 +20,9 @@ struct Post<'a> {
 impl<'a> Post<'a> {
     fn new(title: &'a str, created_on: time::Tm, body: String) -> Self {
         Post {
-            title: title,
-            created_on: created_on,
-            body: body,
+            title,
+            created_on,
+            body,
         }
     }
 }
@@ -37,9 +37,9 @@ struct Page<'a> {
 impl<'a> Page<'a> {
     fn new(title: &'a str, created_on: time::Tm, body: String) -> Self {
         Page {
-            title: title,
-            created_on: created_on,
-            body: body,
+            title,
+            created_on,
+            body,
         }
     }
 }
