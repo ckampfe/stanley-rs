@@ -1,4 +1,6 @@
 use glob::glob;
+use nom::character::complete::line_ending;
+use nom::combinator::rest;
 use nom::*;
 use pulldown_cmark::html;
 use pulldown_cmark::Parser;
