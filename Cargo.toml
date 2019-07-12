@@ -10,7 +10,7 @@ nom = "4.2.3"
 pulldown-cmark = "0.4.0"
 rss = "1.7.0"
 serde = "1.0.90"
-tera = "1.0.0-beta.4"
+tera = "1.0.0-beta.11"
 time = "0.1.42"
 
 [profile.release]
