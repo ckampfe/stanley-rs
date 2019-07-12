@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 glob = "0.3"
-nom = "4.2"
+nom = "5.0"
 pulldown-cmark = "0.5"
 rss = "1.7"
 serde = "1.0"
