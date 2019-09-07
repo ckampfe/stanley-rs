@@ -200,7 +200,7 @@ fn rss_item(post: Post, link: &str) -> rss::Item {
         .unwrap()
 }
 
-fn main() -> Result<(), Box<std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
     let build_dir = cwd.join("build");
 
