@@ -1,6 +1,8 @@
 use glob::glob;
+use nom::bytes::complete::{tag, take_until};
 use nom::character::complete::line_ending;
 use nom::combinator::rest;
+use nom::sequence::{preceded, terminated};
 use nom::*;
 use pulldown_cmark::html;
 use pulldown_cmark::Parser;
@@ -53,57 +55,51 @@ fn parse_md(markdown_str: &str) -> String {
     html_buf
 }
 
-named!(
-    title,
-    preceded!(
-        ws!(tag!("title:")),
-        terminated!(take_until!("\n"), line_ending)
-    )
-);
+fn title(s: &[u8]) -> IResult<&[u8], &[u8]> {
+    let (s, title) = preceded(tag("title: "), terminated(take_until("\n"), line_ending))(s)?;
+    Ok((s, title))
+}
 
-named!(
-    created_on,
-    preceded!(
-        ws!(tag!("created:")),
-        terminated!(take_until!("\n"), line_ending)
-    )
-);
+fn created_on(s: &[u8]) -> IResult<&[u8], &[u8]> {
+    let (s, created) = preceded(tag("created: "), terminated(take_until("\n"), line_ending))(s)?;
+    Ok((s, created))
+}
 
-named!(
-    parse_post<Post>,
-    do_parse!(
-        tag!("---")
-            >> line_ending
-            >> tag!("layout: post")
-            >> line_ending
-            >> title: title
-            >> created_on: created_on
-            >> tag!("---")
-            >> body: rest
-            >> (Post::new(
-                std::str::from_utf8(title).unwrap(),
-                time::strptime(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
-                parse_md(std::str::from_utf8(body).unwrap())
-            ))
-    )
-);
+fn post(s: &[u8]) -> IResult<&[u8], Post> {
+    let (s, _) = tag("---")(s)?;
+    let (s, _) = line_ending(s)?;
+    let (s, _) = tag("layout: post")(s)?;
+    let (s, _) = line_ending(s)?;
+    let (s, title) = title(s)?;
+    let (s, created_on) = created_on(s)?;
+    let (s, _) = tag("---")(s)?;
+    let (s, body) = rest(s)?;
 
-named!(
-    parse_page<Page>,
-    do_parse!(
-        tag!("---")
-            >> line_ending
-            >> title: title
-            >> created_on: created_on
-            >> tag!("---")
-            >> body: rest
-            >> (Page::new(
-                std::str::from_utf8(title).unwrap(),
-                time::strptime(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
-                parse_md(std::str::from_utf8(body).unwrap())
-            ))
-    )
-);
+    let post = Post::new(
+        std::str::from_utf8(title).unwrap(),
+        time::strptime(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
+        parse_md(std::str::from_utf8(body).unwrap()),
+    );
+
+    Ok((s, post))
+}
+
+fn page(s: &[u8]) -> IResult<&[u8], Page> {
+    let (s, _) = tag("---")(s)?;
+    let (s, _) = line_ending(s)?;
+    let (s, title) = title(s)?;
+    let (s, created_on) = created_on(s)?;
+    let (s, _) = tag("---")(s)?;
+    let (s, body) = rest(s)?;
+
+    let page = Page::new(
+        std::str::from_utf8(title).unwrap(),
+        time::strptime(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
+        parse_md(std::str::from_utf8(body).unwrap()),
+    );
+
+    Ok((s, page))
+}
 
 fn get_markdown_files(path: &Path) -> Result<glob::Paths, glob::PatternError> {
     let mdpath = path.join("**/*.md");
@@ -227,7 +223,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut paths_and_posts: Vec<(&PathBuf, Post)> = paths_and_content
         .iter()
         .map(|(post_path, content)| {
-            let post = parse_post(content).unwrap().1;
+            let post = post(content).unwrap().1;
             (post_path, post)
         })
         .collect::<Vec<(&PathBuf, Post)>>();
@@ -315,8 +311,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for page_path in page_paths {
         let pp = page_path?;
-        let contents = &fs::read(&pp)?;
-        let (_, page) = parse_page(contents).unwrap();
+        let contents = fs::read(&pp)?;
+        let (_, page) = page(&contents).unwrap();
 
         let mut page_data = Context::default();
         let page_created_on = time::strftime("%Y-%m-%d", &page.created_on)?;
