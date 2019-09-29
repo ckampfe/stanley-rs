@@ -4,14 +4,11 @@ use nom::character::complete::line_ending;
 use nom::combinator::rest;
 use nom::sequence::{preceded, terminated};
 use nom::*;
-use pulldown_cmark::html;
-use pulldown_cmark::Parser;
+use pulldown_cmark::{html, Parser};
 use rss::{ChannelBuilder, ItemBuilder};
-use std::env;
-use std::fs;
 use std::io::Write;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::{env, fs};
 use tera::{Context, Tera};
 
 #[derive(Clone, Debug)]
