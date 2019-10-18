@@ -236,11 +236,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         post_data.insert("title", post.title);
         post_data.insert("created", &post_created_on);
         post_data.insert("content", &post.body);
-        let post_html = reg.render("post", post_data)?;
+        let post_html = reg.render("post", &post_data)?;
 
         layout_data.insert("title", post.title);
         layout_data.insert("content", &post_html);
-        let post_layout_html = reg.render("layout", layout_data)?;
+        let post_layout_html = reg.render("layout", &layout_data)?;
 
         let filename = post_path
             .file_name()
@@ -264,7 +264,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         index_link_data.insert("title", post.title);
         index_link_data.insert("filename", index_link_post_str);
         index_link_data.insert("created_at", &post_created_on);
-        let index_link_html = reg.render("index_link", index_link_data)?;
+        let index_link_html = reg.render("index_link", &index_link_data)?;
 
         index_links.push(index_link_html);
 
@@ -282,12 +282,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut index_data = Context::default();
 
     index_data.insert("post_links", &index_links);
-    let index_html = reg.render("index", index_data)?;
+    let index_html = reg.render("index", &index_data)?;
 
     let mut layout_data = Context::default();
     layout_data.insert("title", "Clark Kampfe - zeroclarkthirty.com");
     layout_data.insert("content", &index_html);
-    let index_layout_html = reg.render("layout", layout_data)?;
+    let index_layout_html = reg.render("layout", &layout_data)?;
 
     let mut index_output_path = PathBuf::new();
     index_output_path.push(&build_dir);
@@ -316,12 +316,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         page_data.insert("title", page.title);
         page_data.insert("created", &page_created_on);
         page_data.insert("content", &page.body);
-        let page_html = reg.render("page", page_data)?;
+        let page_html = reg.render("page", &page_data)?;
 
         let mut layout_data = Context::default();
         layout_data.insert("title", page.title);
         layout_data.insert("content", &page_html);
-        let page_layout_html = reg.render("layout", layout_data)?;
+        let page_layout_html = reg.render("layout", &layout_data)?;
 
         let filename = pp
             .file_name()
