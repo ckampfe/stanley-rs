@@ -10,7 +10,7 @@ nom = "5.0"
 pulldown-cmark = { version = "0.6", default-features = false, features = ["simd"] }
 rss = "1.8"
 serde = "1.0"
-tera = "1.0.0-beta.21"
+tera = "1.0.0"
 time = "0.1"
 
 [profile.release]
