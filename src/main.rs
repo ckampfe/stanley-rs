@@ -6,7 +6,8 @@ use nom::sequence::{preceded, terminated};
 use nom::*;
 use pulldown_cmark::{html, Parser};
 use rss::{ChannelBuilder, ItemBuilder};
-use std::io::Write;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 use tera::{Context, Tera};
@@ -136,6 +137,12 @@ const INDEX: &str = r###"
 </div>
 "###;
 
+const STYLE: &str = r###"
+<style>
+  {{style}}
+</style>
+"###;
+
 const LAYOUT: &str = r###"
 <!DOCTYPE html>
 <html>
@@ -146,9 +153,7 @@ const LAYOUT: &str = r###"
       {{title}}
     </title>
     <meta content="width=device-width" name="viewport">
-    <link href="prism.css" rel="stylesheet">
-    <link href="main.css" rel="stylesheet">
-    <link href="/favicon" rel="icon" type="image/png">
+    {{style}}
   </head>
   <body>
     <div class="container">
@@ -197,8 +202,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
     let build_dir = cwd.join("build");
 
+    let mut prism_css = String::new();
+    let mut prism_css_file = File::open(build_dir.join("prism.css"))?;
+    prism_css_file.read_to_string(&mut prism_css)?;
+
+    let mut main_css = String::new();
+    let mut main_css_file = File::open(build_dir.join("main.css"))?;
+    main_css_file.read_to_string(&mut main_css)?;
+
     let mut reg = Tera::default();
     reg.add_raw_template("layout", &LAYOUT)?;
+    reg.add_raw_template("style", &STYLE)?;
     reg.add_raw_template("index_link", &INDEX_LINK)?;
     reg.add_raw_template("index", &INDEX)?;
     reg.add_raw_template("post", &POST)?;
@@ -227,6 +241,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     paths_and_posts.sort_unstable_by(|a, b| b.1.created_on.cmp(&a.1.created_on));
 
+    let combined_style = format!("{}{}", prism_css, main_css);
+
+    let mut style_data = Context::new();
+    style_data.insert("style", &combined_style);
+    let style_html = reg.render("style", &style_data)?;
+
     for (post_path, post) in paths_and_posts {
         let mut post_data = Context::new();
         let mut layout_data = Context::new();
@@ -240,6 +260,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         layout_data.insert("title", post.title);
         layout_data.insert("content", &post_html);
+        layout_data.insert("style", &style_html);
         let post_layout_html = reg.render("layout", &layout_data)?;
 
         let filename = post_path
@@ -287,6 +308,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut layout_data = Context::default();
     layout_data.insert("title", "Clark Kampfe - zeroclarkthirty.com");
     layout_data.insert("content", &index_html);
+    layout_data.insert("style", &style_html);
     let index_layout_html = reg.render("layout", &layout_data)?;
 
     let mut index_output_path = PathBuf::new();
@@ -321,6 +343,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut layout_data = Context::default();
         layout_data.insert("title", page.title);
         layout_data.insert("content", &page_html);
+        layout_data.insert("style", &style_html);
         let page_layout_html = reg.render("layout", &layout_data)?;
 
         let filename = pp
