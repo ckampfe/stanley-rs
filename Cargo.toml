@@ -11,7 +11,7 @@ pulldown-cmark = { version = "0.6", default-features = false, features = ["simd"
 rss = "1.8"
 serde = "1.0"
 tera = "1.0.1"
-time = "0.1"
+time = "0.2"
 
 [profile.release]
 opt-level = 3
