@@ -16,12 +16,12 @@ use tera::{Context, Tera};
 #[derive(Clone, Debug)]
 struct Post<'a> {
     title: &'a str,
-    created_on: time::Tm,
+    created_on: time::Date,
     body: String,
 }
 
 impl<'a> Post<'a> {
-    fn new(title: &'a str, created_on: time::Tm, body: String) -> Self {
+    fn new(title: &'a str, created_on: time::Date, body: String) -> Self {
         Post {
             title,
             created_on,
@@ -33,12 +33,12 @@ impl<'a> Post<'a> {
 #[derive(Clone, Debug)]
 struct Page<'a> {
     title: &'a str,
-    created_on: time::Tm,
+    created_on: time::Date,
     body: String,
 }
 
 impl<'a> Page<'a> {
-    fn new(title: &'a str, created_on: time::Tm, body: String) -> Self {
+    fn new(title: &'a str, created_on: time::Date, body: String) -> Self {
         Page {
             title,
             created_on,
@@ -76,7 +76,7 @@ fn post(s: &[u8]) -> IResult<&[u8], Post> {
 
     let post = Post::new(
         std::str::from_utf8(title).unwrap(),
-        time::strptime(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
+        time::Date::parse(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
         parse_md(std::str::from_utf8(body).unwrap()),
     );
 
@@ -93,7 +93,7 @@ fn page(s: &[u8]) -> IResult<&[u8], Page> {
 
     let page = Page::new(
         std::str::from_utf8(title).unwrap(),
-        time::strptime(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
+        time::Date::parse(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
         parse_md(std::str::from_utf8(body).unwrap()),
     );
 
@@ -256,7 +256,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut layout_data = Context::new();
         let mut index_link_data = Context::new();
 
-        let post_created_on = time::strftime("%Y-%m-%d", &post.created_on)?;
+        let post_created_on = &post.created_on.format("%Y-%m-%d");
         post_data.insert("title", post.title);
         post_data.insert("created", &post_created_on);
         post_data.insert("content", &post.body);
@@ -338,7 +338,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (_, page) = page(&contents).unwrap();
 
         let mut page_data = Context::default();
-        let page_created_on = time::strftime("%Y-%m-%d", &page.created_on)?;
+        let page_created_on = &page.created_on.format("%Y-%m-%d");
         page_data.insert("title", page.title);
         page_data.insert("created", &page_created_on);
         page_data.insert("content", &page.body);
