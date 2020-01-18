@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 glob = "0.3"
+minifier = "0"
 nom = "5.0"
 pulldown-cmark = { version = "0.6", default-features = false, features = ["simd"] }
 rss = "1.8"

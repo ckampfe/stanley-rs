@@ -1,4 +1,5 @@
 use glob::glob;
+use minifier::css;
 use nom::bytes::complete::{tag, take_until};
 use nom::character::complete::line_ending;
 use nom::combinator::rest;
@@ -243,8 +244,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let combined_style = format!("{}{}", prism_css, main_css);
 
+    let minified_style = css::minify(&combined_style)?;
+
     let mut style_data = Context::new();
-    style_data.insert("style", &combined_style);
+    style_data.insert("style", &minified_style);
     let style_html = reg.render("style", &style_data)?;
 
     for (post_path, post) in paths_and_posts {
