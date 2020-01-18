@@ -154,6 +154,7 @@ const LAYOUT: &str = r###"
       {{title}}
     </title>
     <meta content="width=device-width" name="viewport">
+    <link rel="icon" href="favicon-min.png" type="image/png" />
     {{style}}
   </head>
   <body>
