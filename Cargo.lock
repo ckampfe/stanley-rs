@@ -627,7 +627,7 @@ dependencies = [
  "pulldown-cmark 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rss 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tera 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "time 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -691,11 +691,13 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
+ "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustversion 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "time-macros 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -922,7 +924,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum tera 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "8501ae034d1c2d2e8c29f3c259d919c11489220d8ee8a268e7e1fe3eff94c86a"
 "checksum thread_local 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d40c6d1b69745a6ec6fb1ca717914848da4b44ae29d9b3080cbee91d72a69b14"
 "checksum time 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)" = "db8dcfca086c1143c9270ac42a2bbd8a7ee477b78ac8e45b19abfb0cbede4b6f"
-"checksum time 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "bcb8742444475438c500d017736dd7cf3d9c9dd1f0153cfa4af428692484e3ef"
+"checksum time 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)" = "3043ac959c44dccc548a57417876c8fe241502aed69d880efc91166c02717a93"
 "checksum time-macros 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9ae9b6e9f095bc105e183e3cd493d72579be3181ad4004fceb01adbe9eecab2d"
 "checksum time-macros-impl 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e987cfe0537f575b5fc99909de6185f6c19c3ad8889e2275e686a873d0869ba1"
 "checksum typenum 1.11.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6d2783fe2d6b8c1101136184eb41be8b1ad379e4657050b8aaff0c79ee7575f9"
