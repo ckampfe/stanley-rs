@@ -10,7 +10,7 @@ minifier = "0"
 nom = "5.0"
 pulldown-cmark = { version = "0.6", default-features = false, features = ["simd"] }
 rss = "1.9"
-tera = "1.0"
+tera = "1.1"
 time = "0.2"
 
 [profile.release]
