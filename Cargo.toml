@@ -11,7 +11,7 @@ nom = "5.1"
 pulldown-cmark = { version = "0.7", default-features = false, features = ["simd"] }
 rss = "1.9"
 tera = "1.1"
-time = "0.2.9"
+time = "0.2.11"
 
 [profile.release]
 opt-level = 3
