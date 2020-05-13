@@ -622,7 +622,7 @@ dependencies = [
  "pulldown-cmark 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rss 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tera 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "time 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.2.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -730,7 +730,7 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1016,7 +1016,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum tera 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "19d25bed9d2cf684de6ffdaa9ac35373739eeed0d6bef1de545bbe6cf571ad07"
 "checksum thread_local 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d40c6d1b69745a6ec6fb1ca717914848da4b44ae29d9b3080cbee91d72a69b14"
 "checksum time 0.1.43 (registry+https://github.com/rust-lang/crates.io-index)" = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
-"checksum time 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)" = "e1330829d2e6c06771eeae476be12ff1aa9eb5e29ca718a431ab27168efde6c1"
+"checksum time 0.2.16 (registry+https://github.com/rust-lang/crates.io-index)" = "3a51cadc5b1eec673a685ff7c33192ff7b7603d0b75446fb354939ee615acb15"
 "checksum time-macros 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9ae9b6e9f095bc105e183e3cd493d72579be3181ad4004fceb01adbe9eecab2d"
 "checksum time-macros-impl 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "e5c3be1edfad6027c69f5491cf4cb310d1a71ecd6af742788c6ff8bced86b8fa"
 "checksum typenum 1.12.0 (registry+https://github.com/rust-lang/crates.io-index)" = "373c8a200f9e67a0c95e62a4f52fbf80c23b4381c05a17845531982fa99e6b33"
