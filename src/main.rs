@@ -184,8 +184,8 @@ const LAYOUT: &str = r###"
 
 fn rss_feed() -> rss::Channel {
     ChannelBuilder::default()
-        .title("zct")
-        .link("https://zeroclarkthiry.com")
+        .title("Clark Kampfe - zeroclarkthirty.com")
+        .link("https://zeroclarkthirty.com")
         .description("zeroclarkthirty.com")
         .build()
         .unwrap()
@@ -220,17 +220,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     reg.add_raw_template("post", &POST)?;
     reg.add_raw_template("page", &PAGE)?;
 
-    let post_paths = get_markdown_files(&cwd.join("posts"))?;
+    let post_paths = get_markdown_files(&cwd.join("posts"))?.collect::<Vec<_>>();
 
     let mut feed = rss_feed();
-    let mut rss_items = vec![];
-    let mut index_links = vec![];
-    let mut paths_and_content: Vec<(PathBuf, Vec<u8>)> = vec![];
+    let mut rss_items = Vec::with_capacity(post_paths.len());
+    let mut index_links = Vec::with_capacity(post_paths.len());
+    let mut paths_and_content: Vec<(PathBuf, Vec<u8>)> = Vec::with_capacity(post_paths.len());
 
     for post_path in post_paths {
-        let pp = post_path?;
-        let content = fs::read(&pp)?;
-        paths_and_content.push((pp, content));
+        let post_path = post_path?;
+        let content = fs::read(&post_path)?;
+        paths_and_content.push((post_path, content));
     }
 
     let mut paths_and_posts: Vec<(&PathBuf, Post)> = paths_and_content
