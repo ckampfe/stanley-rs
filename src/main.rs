@@ -196,6 +196,7 @@ fn rss_item(post: Post, link: &str) -> rss::Item {
         .title(post.title.to_string())
         .link(link.to_owned())
         .content(post.body)
+        .pub_date(post.created_on.to_string())
         .build()
         .unwrap()
 }
