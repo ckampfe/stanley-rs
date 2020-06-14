@@ -1,3 +1,4 @@
+use chrono::Utc;
 use glob::glob;
 use minifier::css;
 use nom::bytes::complete::{tag, take_until};
@@ -16,12 +17,12 @@ use tera::{Context, Tera};
 #[derive(Clone, Debug)]
 struct Post<'a> {
     title: &'a str,
-    created_on: time::Date,
+    created_on: chrono::NaiveDate,
     body: String,
 }
 
 impl<'a> Post<'a> {
-    fn new(title: &'a str, created_on: time::Date, body: String) -> Self {
+    fn new(title: &'a str, created_on: chrono::NaiveDate, body: String) -> Self {
         Post {
             title,
             created_on,
@@ -33,12 +34,12 @@ impl<'a> Post<'a> {
 #[derive(Clone, Debug)]
 struct Page<'a> {
     title: &'a str,
-    created_on: time::Date,
+    created_on: chrono::NaiveDate,
     body: String,
 }
 
 impl<'a> Page<'a> {
-    fn new(title: &'a str, created_on: time::Date, body: String) -> Self {
+    fn new(title: &'a str, created_on: chrono::NaiveDate, body: String) -> Self {
         Page {
             title,
             created_on,
@@ -76,7 +77,8 @@ fn post(s: &[u8]) -> IResult<&[u8], Post> {
 
     let post = Post::new(
         std::str::from_utf8(title).unwrap(),
-        time::Date::parse(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
+        chrono::NaiveDate::parse_from_str(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d")
+            .unwrap(),
         parse_md(std::str::from_utf8(body).unwrap()),
     );
 
@@ -93,7 +95,8 @@ fn page(s: &[u8]) -> IResult<&[u8], Page> {
 
     let page = Page::new(
         std::str::from_utf8(title).unwrap(),
-        time::Date::parse(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d").unwrap(),
+        chrono::NaiveDate::parse_from_str(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d")
+            .unwrap(),
         parse_md(std::str::from_utf8(body).unwrap()),
     );
 
@@ -192,11 +195,14 @@ fn rss_feed() -> rss::Channel {
 }
 
 fn rss_item(post: Post, link: &str) -> rss::Item {
+    let t = chrono::NaiveTime::from_hms_milli(0, 0, 0, 0);
+    let dt =
+        chrono::DateTime::<Utc>::from_utc(post.created_on.and_time(t), chrono::Utc).to_rfc2822();
     ItemBuilder::default()
         .title(post.title.to_string())
         .link(link.to_owned())
         .content(post.body)
-        .pub_date(post.created_on.to_string())
+        .pub_date(dt)
         .build()
         .unwrap()
 }
@@ -259,7 +265,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let post_created_on = &post.created_on.format("%Y-%m-%d");
         post_data.insert("title", post.title);
-        post_data.insert("created", &post_created_on);
+        post_data.insert("created", &post_created_on.to_string());
         post_data.insert("content", &post.body);
         let post_html = reg.render("post", &post_data)?;
 
@@ -289,7 +295,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .ok_or_else(|| "Could not create filename from osstr")?;
         index_link_data.insert("title", post.title);
         index_link_data.insert("filename", index_link_post_str);
-        index_link_data.insert("created_at", &post_created_on);
+        index_link_data.insert("created_at", &post_created_on.to_string());
         let index_link_html = reg.render("index_link", &index_link_data)?;
 
         index_links.push(index_link_html);
@@ -341,7 +347,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut page_data = Context::default();
         let page_created_on = &page.created_on.format("%Y-%m-%d");
         page_data.insert("title", page.title);
-        page_data.insert("created", &page_created_on);
+        page_data.insert("created", &page_created_on.to_string());
         page_data.insert("content", &page.body);
         let page_html = reg.render("page", &page_data)?;
 
