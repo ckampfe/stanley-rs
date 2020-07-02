@@ -5,7 +5,7 @@ authors = ["Clark Kampfe <clark.kampfe@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-chrono = "0.4.11"
+chrono = "0.4.12"
 glob = "0.3.0"
 minifier = "0.0.36"
 nom = "5.1.2"
