@@ -5,7 +5,7 @@ use nom::bytes::complete::{tag, take_until};
 use nom::character::complete::line_ending;
 use nom::combinator::rest;
 use nom::sequence::{preceded, terminated};
-use nom::*;
+use nom::IResult;
 use pulldown_cmark::{html, Parser};
 use rss::{ChannelBuilder, ItemBuilder};
 use std::fs::File;
