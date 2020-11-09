@@ -176,6 +176,7 @@ const LAYOUT: &str = r###"
             <p>
               <a href="https://github.com/ckampfe/">github</a>
               <a href="https://twitter.com/clarkkampfe">twitter</a>
+              <a href="https://zeroclarkthirty.com/feed">rss</a>
             </p>
           </div>
         </div>
