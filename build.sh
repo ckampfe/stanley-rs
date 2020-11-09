@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 set -euxo pipefail
 
-RUSTFLAGS="-C target-cpu=native" cargo install --path .
 echo $(which stanley-rs)
 stanley-rs
 echo "tar -cvf build.tar build"
