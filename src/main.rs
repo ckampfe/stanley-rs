@@ -221,12 +221,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     main_css_file.read_to_string(&mut main_css)?;
 
     let mut reg = Tera::default();
-    reg.add_raw_template("layout", &LAYOUT)?;
-    reg.add_raw_template("style", &STYLE)?;
-    reg.add_raw_template("index_link", &INDEX_LINK)?;
-    reg.add_raw_template("index", &INDEX)?;
-    reg.add_raw_template("post", &POST)?;
-    reg.add_raw_template("page", &PAGE)?;
+    reg.add_raw_templates(vec![
+        ("layout", &LAYOUT),
+        ("style", &STYLE),
+        ("index_link", &INDEX_LINK),
+        ("index", &INDEX),
+        ("post", &POST),
+        ("page", &PAGE),
+    ])?;
 
     let post_paths = get_markdown_files(&cwd.join("posts"))?.collect::<Vec<_>>();
 
