@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -euxo pipefail
 
-echo $(which stanley-rs)
+which stanley-rs
 stanley-rs
 echo "tar -cvf build.tar build"
 tar -cvf build.tar build
