@@ -279,7 +279,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let filename = post_path
             .file_name()
-            .ok_or_else(|| "Could not make post path into str")?;
+            .expect("Could not make post path into str");
 
         let mut post_output_path = PathBuf::new();
         post_output_path.push(&build_dir);
@@ -295,7 +295,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let index_link_post_str = index_link_post_path
             .to_str()
-            .ok_or_else(|| "Could not create filename from osstr")?;
+            .expect("Could not create filename from osstr");
         index_link_data.insert("title", post.title);
         index_link_data.insert("filename", index_link_post_str);
         index_link_data.insert("created_at", &post_created_on.to_string());
@@ -307,9 +307,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         post_link.push("https://zeroclarkthirty.com");
         post_link.push(filename);
         post_link.set_extension("html");
-        let post_link_str = post_link
-            .to_str()
-            .ok_or_else(|| "Could not convert link to str")?;
+        let post_link_str = post_link.to_str().expect("Could not convert link to str");
         let post_rss_item = rss_item(post, post_link_str);
         rss_items.push(post_rss_item);
     }
@@ -360,9 +358,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         layout_data.insert("style", &style_html);
         let page_layout_html = reg.render("layout", &layout_data)?;
 
-        let filename = pp
-            .file_name()
-            .ok_or_else(|| "Could not make page path into str")?;
+        let filename = pp.file_name().expect("Could not make page path into str");
         let mut page_output_path = PathBuf::new();
         page_output_path.push(&build_dir);
         page_output_path.push(filename);
