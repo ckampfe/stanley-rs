@@ -1,0 +1,20 @@
+version: 2
+updates:
+- package-ecosystem: cargo
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "11:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: tera
+    versions:
+    - 1.7.0
+    - 1.7.1
+  - dependency-name: minifier
+    versions:
+    - 0.0.37
+  - dependency-name: nom
+    versions:
+    - 6.1.0
+    - 6.1.2
