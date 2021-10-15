@@ -1,6 +1,6 @@
+use anyhow::{Context, Result};
 use chrono::Utc;
 use glob::glob;
-use minifier::css;
 use nom::bytes::complete::{tag, take_until};
 use nom::character::complete::line_ending;
 use nom::combinator::rest;
@@ -8,11 +8,10 @@ use nom::sequence::{preceded, terminated};
 use nom::IResult;
 use pulldown_cmark::{html, Parser};
 use rss::{ChannelBuilder, ItemBuilder};
-use std::fs::File;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{env, fs};
-use tera::{Context, Tera};
+use tera::Tera;
 
 #[derive(Clone, Debug)]
 struct Post<'a> {
@@ -141,12 +140,6 @@ const INDEX: &str = r###"
 </div>
 "###;
 
-const STYLE: &str = r###"
-<style>
-  {{style}}
-</style>
-"###;
-
 const LAYOUT: &str = r###"
 <!DOCTYPE html>
 <html>
@@ -158,7 +151,6 @@ const LAYOUT: &str = r###"
     </title>
     <meta content="width=device-width" name="viewport">
     <link rel="icon" href="favicon-min.png" type="image/png" />
-    {{style}}
   </head>
   <body>
     <div class="container">
@@ -176,7 +168,7 @@ const LAYOUT: &str = r###"
             <p>
               <a href="https://github.com/ckampfe/">github</a>
               <a href="https://twitter.com/clarkkampfe">twitter</a>
-              <a href="https://zeroclarkthirty.com/feed">rss</a>
+              <a href="/feed">rss</a>
             </p>
           </div>
         </div>
@@ -208,29 +200,23 @@ fn rss_item(post: Post, link: &str) -> rss::Item {
         .unwrap()
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     let cwd = env::current_dir()?;
     let build_dir = cwd.join("build");
-
-    let mut prism_css = String::new();
-    let mut prism_css_file = File::open(build_dir.join("prism.css"))?;
-    prism_css_file.read_to_string(&mut prism_css)?;
-
-    let mut main_css = String::new();
-    let mut main_css_file = File::open(build_dir.join("main.css"))?;
-    main_css_file.read_to_string(&mut main_css)?;
 
     let mut reg = Tera::default();
     reg.add_raw_templates(vec![
         ("layout", &LAYOUT),
-        ("style", &STYLE),
         ("index_link", &INDEX_LINK),
         ("index", &INDEX),
         ("post", &POST),
         ("page", &PAGE),
-    ])?;
+    ])
+    .with_context(|| "Could not register templates")?;
 
-    let post_paths = get_markdown_files(&cwd.join("posts"))?.collect::<Vec<_>>();
+    let post_paths = get_markdown_files(&cwd.join("posts"))
+        .with_context(|| "Could not get markdown files for posts")?
+        .collect::<Vec<_>>();
 
     let mut feed = rss_feed();
     let mut rss_items = Vec::with_capacity(post_paths.len());
@@ -239,7 +225,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for post_path in post_paths {
         let post_path = post_path?;
-        let content = fs::read(&post_path)?;
+        let content =
+            fs::read(&post_path).with_context(|| format!("Could not read post {:?}", post_path))?;
         paths_and_content.push((post_path, content));
     }
 
@@ -253,18 +240,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     paths_and_posts.sort_unstable_by(|a, b| b.1.created_on.cmp(&a.1.created_on));
 
-    let combined_style = format!("{}{}", prism_css, main_css);
-
-    let minified_style = css::minify(&combined_style)?;
-
-    let mut style_data = Context::new();
-    style_data.insert("style", &minified_style);
-    let style_html = reg.render("style", &style_data)?;
-
     for (post_path, post) in paths_and_posts {
-        let mut post_data = Context::new();
-        let mut layout_data = Context::new();
-        let mut index_link_data = Context::new();
+        let mut post_data = tera::Context::new();
+        let mut layout_data = tera::Context::new();
+        let mut index_link_data = tera::Context::new();
 
         let post_created_on = &post.created_on.format("%Y-%m-%d");
         post_data.insert("title", post.title);
@@ -274,7 +253,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         layout_data.insert("title", post.title);
         layout_data.insert("content", &post_html);
-        layout_data.insert("style", &style_html);
         let post_layout_html = reg.render("layout", &layout_data)?;
 
         let filename = post_path
@@ -285,8 +263,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         post_output_path.push(&build_dir);
         post_output_path.push(filename);
         post_output_path.set_extension("html");
-        let mut post_output = fs::File::create(post_output_path)?;
-        post_output.write_all(post_layout_html.as_bytes())?;
+        let mut post_output = fs::File::create(&post_output_path).with_context(|| {
+            format!("Could not create post output path: {:?}", &post_output_path)
+        })?;
+        post_output
+            .write_all(post_layout_html.as_bytes())
+            .with_context(|| {
+                format!(
+                    "Could not write post output html to {:?}",
+                    &post_output_path
+                )
+            })?;
 
         let mut index_link_post_path = PathBuf::new();
 
@@ -312,15 +299,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         rss_items.push(post_rss_item);
     }
 
-    let mut index_data = Context::default();
+    let mut index_data = tera::Context::default();
 
     index_data.insert("post_links", &index_links);
     let index_html = reg.render("index", &index_data)?;
 
-    let mut layout_data = Context::default();
+    let mut layout_data = tera::Context::default();
     layout_data.insert("title", "Clark Kampfe - zeroclarkthirty.com");
     layout_data.insert("content", &index_html);
-    layout_data.insert("style", &style_html);
     let index_layout_html = reg.render("layout", &layout_data)?;
 
     let mut index_output_path = PathBuf::new();
@@ -342,29 +328,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for page_path in page_paths {
         let pp = page_path?;
-        let contents = fs::read(&pp)?;
+        let contents = fs::read(&pp).with_context(|| format!("Could not read {:?}", pp))?;
         let (_, page) = page(&contents).unwrap();
 
-        let mut page_data = Context::default();
+        let mut page_data = tera::Context::default();
         let page_created_on = &page.created_on.format("%Y-%m-%d");
         page_data.insert("title", page.title);
         page_data.insert("created", &page_created_on.to_string());
         page_data.insert("content", &page.body);
-        let page_html = reg.render("page", &page_data)?;
+        let page_html = reg
+            .render("page", &page_data)
+            .with_context(|| format!("Could not render page {:?}", pp))?;
 
-        let mut layout_data = Context::default();
+        let mut layout_data = tera::Context::default();
         layout_data.insert("title", page.title);
         layout_data.insert("content", &page_html);
-        layout_data.insert("style", &style_html);
-        let page_layout_html = reg.render("layout", &layout_data)?;
+        let page_layout_html = reg
+            .render("layout", &layout_data)
+            .with_context(|| format!("Could not render layout {:?}", pp))?;
 
         let filename = pp.file_name().expect("Could not make page path into str");
         let mut page_output_path = PathBuf::new();
         page_output_path.push(&build_dir);
         page_output_path.push(filename);
         page_output_path.set_extension("html");
-        let mut page_output = fs::File::create(page_output_path)?;
-        page_output.write_all(page_layout_html.as_bytes())?;
+        let mut page_output = fs::File::create(&page_output_path)
+            .with_context(|| format!("Could not create {:?}", page_output_path))?;
+        page_output
+            .write_all(page_layout_html.as_bytes())
+            .with_context(|| format!("Could not write page to {:?}", page_output_path))?;
     }
 
     Ok(())
