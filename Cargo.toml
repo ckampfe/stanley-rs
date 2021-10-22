@@ -2,7 +2,7 @@
 name = "stanley-rs"
 version = "0.1.0"
 authors = ["Clark Kampfe <clark.kampfe@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 anyhow = "1"
@@ -10,8 +10,8 @@ chrono = "0.4"
 glob = "0.3"
 nom = "7.0"
 pulldown-cmark = { version = "0.8", default-features = false, features = ["simd"] }
-rss = "1.10"
-tera = { version = "1.12", default-features = false }
+rss = "2.0"
+tera = { version = "1.13", default-features = false }
 
 [profile.release]
 codegen-units = 1

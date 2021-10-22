@@ -184,7 +184,6 @@ fn rss_feed() -> rss::Channel {
         .link("https://zeroclarkthirty.com")
         .description("zeroclarkthirty.com")
         .build()
-        .unwrap()
 }
 
 fn rss_item(post: Post, link: &str) -> rss::Item {
@@ -197,7 +196,6 @@ fn rss_item(post: Post, link: &str) -> rss::Item {
         .content(post.body)
         .pub_date(dt)
         .build()
-        .unwrap()
 }
 
 fn main() -> Result<()> {
