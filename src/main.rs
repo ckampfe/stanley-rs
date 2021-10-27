@@ -199,8 +199,9 @@ fn rss_item(post: Post, link: &str) -> rss::Item {
 }
 
 fn main() -> Result<()> {
-    let cwd = env::current_dir()?;
+    let cwd = env::current_dir().context("Could not get current working directory")?;
     let build_dir = cwd.join("build");
+    std::fs::create_dir_all(&build_dir).context("Could not create build dir")?;
 
     let mut reg = Tera::default();
     reg.add_raw_templates(vec![
