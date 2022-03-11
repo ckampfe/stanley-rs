@@ -10,7 +10,6 @@ use pulldown_cmark::{html, Parser};
 use rss::{ChannelBuilder, ItemBuilder};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::{env, fs};
 use tera::Tera;
 
 #[derive(Clone, Debug)]
@@ -54,17 +53,17 @@ fn parse_md(markdown_str: &str) -> String {
     html_buf
 }
 
-fn title(s: &[u8]) -> IResult<&[u8], &[u8]> {
+fn title(s: &str) -> IResult<&str, &str> {
     let (s, title) = preceded(tag("title: "), terminated(take_until("\n"), line_ending))(s)?;
     Ok((s, title))
 }
 
-fn created_on(s: &[u8]) -> IResult<&[u8], &[u8]> {
+fn created_on(s: &str) -> IResult<&str, &str> {
     let (s, created) = preceded(tag("created: "), terminated(take_until("\n"), line_ending))(s)?;
     Ok((s, created))
 }
 
-fn post(s: &[u8]) -> IResult<&[u8], Post> {
+fn post(s: &str) -> IResult<&str, Post> {
     let (s, _) = tag("---")(s)?;
     let (s, _) = line_ending(s)?;
     let (s, _) = tag("layout: post")(s)?;
@@ -75,16 +74,15 @@ fn post(s: &[u8]) -> IResult<&[u8], Post> {
     let (s, body) = rest(s)?;
 
     let post = Post::new(
-        std::str::from_utf8(title).unwrap(),
-        chrono::NaiveDate::parse_from_str(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d")
-            .unwrap(),
-        parse_md(std::str::from_utf8(body).unwrap()),
+        title,
+        chrono::NaiveDate::parse_from_str(created_on, "%Y-%m-%d").unwrap(),
+        parse_md(body),
     );
 
     Ok((s, post))
 }
 
-fn page(s: &[u8]) -> IResult<&[u8], Page> {
+fn page(s: &str) -> IResult<&str, Page> {
     let (s, _) = tag("---")(s)?;
     let (s, _) = line_ending(s)?;
     let (s, title) = title(s)?;
@@ -93,10 +91,9 @@ fn page(s: &[u8]) -> IResult<&[u8], Page> {
     let (s, body) = rest(s)?;
 
     let page = Page::new(
-        std::str::from_utf8(title).unwrap(),
-        chrono::NaiveDate::parse_from_str(std::str::from_utf8(created_on).unwrap(), "%Y-%m-%d")
-            .unwrap(),
-        parse_md(std::str::from_utf8(body).unwrap()),
+        title,
+        chrono::NaiveDate::parse_from_str(created_on, "%Y-%m-%d").unwrap(),
+        parse_md(body),
     );
 
     Ok((s, page))
@@ -199,7 +196,7 @@ fn rss_item(post: Post, link: &str) -> rss::Item {
 }
 
 fn main() -> Result<()> {
-    let cwd = env::current_dir().context("Could not get current working directory")?;
+    let cwd = std::env::current_dir().context("Could not get current working directory")?;
     let build_dir = cwd.join("build");
     std::fs::create_dir_all(&build_dir).context("Could not create build dir")?;
 
@@ -220,12 +217,12 @@ fn main() -> Result<()> {
     let mut feed = rss_feed();
     let mut rss_items = Vec::with_capacity(post_paths.len());
     let mut index_links = Vec::with_capacity(post_paths.len());
-    let mut paths_and_content: Vec<(PathBuf, Vec<u8>)> = Vec::with_capacity(post_paths.len());
+    let mut paths_and_content: Vec<(PathBuf, String)> = Vec::with_capacity(post_paths.len());
 
     for post_path in post_paths {
         let post_path = post_path?;
-        let content =
-            fs::read(&post_path).with_context(|| format!("Could not read post {:?}", post_path))?;
+        let content = std::fs::read_to_string(&post_path)
+            .with_context(|| format!("Could not read post {:?}", post_path))?;
         paths_and_content.push((post_path, content));
     }
 
@@ -262,7 +259,7 @@ fn main() -> Result<()> {
         post_output_path.push(&build_dir);
         post_output_path.push(filename);
         post_output_path.set_extension("html");
-        let mut post_output = fs::File::create(&post_output_path).with_context(|| {
+        let mut post_output = std::fs::File::create(&post_output_path).with_context(|| {
             format!("Could not create post output path: {:?}", &post_output_path)
         })?;
         post_output
@@ -312,14 +309,14 @@ fn main() -> Result<()> {
     index_output_path.push(&build_dir);
     index_output_path.push("index");
     index_output_path.set_extension("html");
-    let mut index_output = fs::File::create(index_output_path)?;
+    let mut index_output = std::fs::File::create(index_output_path)?;
     index_output.write_all(index_layout_html.as_bytes())?;
 
     feed.set_items(rss_items);
     let mut rss_feed_path = PathBuf::new();
     rss_feed_path.push(&build_dir);
     rss_feed_path.push("feed");
-    let feed_file = fs::File::create(rss_feed_path)?;
+    let feed_file = std::fs::File::create(rss_feed_path)?;
 
     feed.write_to(feed_file)?;
 
@@ -327,7 +324,8 @@ fn main() -> Result<()> {
 
     for page_path in page_paths {
         let pp = page_path?;
-        let contents = fs::read(&pp).with_context(|| format!("Could not read {:?}", pp))?;
+        let contents =
+            std::fs::read_to_string(&pp).with_context(|| format!("Could not read {:?}", pp))?;
         let (_, page) = page(&contents).unwrap();
 
         let mut page_data = tera::Context::default();
@@ -351,7 +349,7 @@ fn main() -> Result<()> {
         page_output_path.push(&build_dir);
         page_output_path.push(filename);
         page_output_path.set_extension("html");
-        let mut page_output = fs::File::create(&page_output_path)
+        let mut page_output = std::fs::File::create(&page_output_path)
             .with_context(|| format!("Could not create {:?}", page_output_path))?;
         page_output
             .write_all(page_layout_html.as_bytes())
