@@ -6,6 +6,10 @@ import sys
 def main():
     today = date.today()
     title_raw = sys.argv[1:]
+
+    if not title_raw:
+        raise RuntimeError("Title cannot be empty")
+
     title_spaced = " ".join(title_raw)
     title_dashed = "-".join(title_raw)
     today_dashed = today.strftime("%Y-%m-%d")
