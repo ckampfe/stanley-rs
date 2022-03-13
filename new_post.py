@@ -3,26 +3,22 @@
 from datetime import date
 import sys
 
-def main():
-    today = date.today()
-    title_raw = sys.argv[1:]
 
-    if not title_raw:
-        raise RuntimeError("Title cannot be empty")
+today: date = date.today()
+title_raw: list[str] = sys.argv[1:]
 
-    title_spaced = " ".join(title_raw)
-    title_dashed = "-".join(title_raw)
-    today_dashed = today.strftime("%Y-%m-%d")
+if not title_raw:
+    raise RuntimeError("Title cannot be empty")
 
-    # only open the file for writing if it does not exist,
-    # with "x" mode
-    with open(f"{today_dashed}-{title_dashed}.md", "x") as f:
-        f.write("---\n")
-        f.write("layout: post\n")
-        f.write(f"title: {title_spaced}\n")
-        f.write(f"created: {today_dashed}\n")
-        f.write("---\n\n\n")
+title_spaced: str = " ".join(title_raw)
+title_dashed: str = "-".join(title_raw)
+today_dashed: str = today.strftime("%Y-%m-%d")
 
-
-if __name__ == "__main__":
-    sys.exit(main())
+# only open the file for writing if it does not exist,
+# with "x" mode
+with open(f"{today_dashed}-{title_dashed}.md", "x") as f:
+    f.write("---\n")
+    f.write("layout: post\n")
+    f.write(f"title: {title_spaced}\n")
+    f.write(f"created: {today_dashed}\n")
+    f.write("---\n\n\n")
