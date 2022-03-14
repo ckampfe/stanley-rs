@@ -14,11 +14,17 @@ title_spaced: str = " ".join(title_raw)
 title_dashed: str = "-".join(title_raw)
 today_dashed: str = today.strftime("%Y-%m-%d")
 
+post = [
+    "---",
+    "layout: post",
+    f"title: {title_spaced}",
+    f"created: {today_dashed}",
+    "---",
+]
+post = "\n".join(post)
+post = post + "\n\n\n"
+
 # only open the file for writing if it does not exist,
 # with "x" mode
 with open(f"{today_dashed}-{title_dashed}.md", "x") as f:
-    f.write("---\n")
-    f.write("layout: post\n")
-    f.write(f"title: {title_spaced}\n")
-    f.write(f"created: {today_dashed}\n")
-    f.write("---\n\n\n")
+    f.write(post)
