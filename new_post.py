@@ -14,15 +14,15 @@ title_spaced: str = " ".join(title_raw)
 title_dashed: str = "-".join(title_raw)
 today_dashed: str = today.strftime("%Y-%m-%d")
 
-post = [
+frontmatter: list[str] = [
     "---",
     "layout: post",
     f"title: {title_spaced}",
     f"created: {today_dashed}",
     "---",
 ]
-post = "\n".join(post)
-post = post + "\n\n\n"
+
+post: str = "\n".join(frontmatter) + "\n\n\n"
 
 # only open the file for writing if it does not exist,
 # with "x" mode
