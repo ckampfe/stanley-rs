@@ -201,7 +201,7 @@ fn main() -> Result<()> {
     std::fs::create_dir_all(&build_dir).context("Could not create build dir")?;
 
     let mut reg = Tera::default();
-    reg.add_raw_templates(vec![
+    reg.add_raw_templates([
         ("layout", &LAYOUT),
         ("index_link", &INDEX_LINK),
         ("index", &INDEX),
