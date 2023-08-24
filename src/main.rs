@@ -1,49 +1,50 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use glob::glob;
-use nom::bytes::complete::{tag, take_until};
-use nom::character::complete::line_ending;
-use nom::combinator::rest;
-use nom::sequence::{preceded, terminated};
-use nom::IResult;
+use maud::{html, Markup, PreEscaped, DOCTYPE};
+use once_cell::sync::Lazy;
 use pulldown_cmark::{html, Parser};
+use regex::Regex;
 use rss::{ChannelBuilder, ItemBuilder};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use tera::Tera;
 
-#[derive(Clone, Debug)]
+static POST_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+        r"---
+layout: post
+title: (?P<title>.+)
+created: (?P<created_on>\d{4}-\d{2}-\d{2})
+---
+(?s)
+(?P<body>.*)",
+    )
+    .unwrap()
+});
+
+static PAGE_REGEX: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+        r"---
+title: (?P<title>.+)
+created: (?P<created_on>\d{4}-\d{2}-\d{2})
+---
+(?s)
+(?P<body>.+)",
+    )
+    .unwrap()
+});
+
 struct Post<'a> {
     title: &'a str,
     created_on: chrono::NaiveDate,
     body: String,
 }
 
-impl<'a> Post<'a> {
-    fn new(title: &'a str, created_on: chrono::NaiveDate, body: String) -> Self {
-        Post {
-            title,
-            created_on,
-            body,
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
 struct Page<'a> {
     title: &'a str,
-    created_on: chrono::NaiveDate,
+    // this is unused
+    // _created_on: chrono::NaiveDate,
     body: String,
-}
-
-impl<'a> Page<'a> {
-    fn new(title: &'a str, created_on: chrono::NaiveDate, body: String) -> Self {
-        Page {
-            title,
-            created_on,
-            body,
-        }
-    }
 }
 
 fn parse_md(markdown_str: &str) -> String {
@@ -53,127 +54,142 @@ fn parse_md(markdown_str: &str) -> String {
     html_buf
 }
 
-fn title(s: &str) -> IResult<&str, &str> {
-    let (s, title) = preceded(tag("title: "), terminated(take_until("\n"), line_ending))(s)?;
-    Ok((s, title))
+fn parse_post(s: &str) -> Result<Post> {
+    let captures = POST_REGEX.captures(s).unwrap();
+
+    Ok(Post {
+        title: captures.name("title").unwrap().as_str(),
+        created_on: chrono::NaiveDate::parse_from_str(&captures["created_on"], "%Y-%m-%d")?,
+        body: parse_md(&captures["body"]),
+    })
 }
 
-fn created_on(s: &str) -> IResult<&str, &str> {
-    let (s, created) = preceded(tag("created: "), terminated(take_until("\n"), line_ending))(s)?;
-    Ok((s, created))
-}
+fn parse_page(s: &str) -> Result<Page> {
+    let captures = PAGE_REGEX.captures(s).unwrap();
 
-fn post(s: &str) -> IResult<&str, Post> {
-    let (s, _) = tag("---")(s)?;
-    let (s, _) = line_ending(s)?;
-    let (s, _) = tag("layout: post")(s)?;
-    let (s, _) = line_ending(s)?;
-    let (s, title) = title(s)?;
-    let (s, created_on) = created_on(s)?;
-    let (s, _) = tag("---")(s)?;
-    let (s, body) = rest(s)?;
-
-    let post = Post::new(
-        title,
-        chrono::NaiveDate::parse_from_str(created_on, "%Y-%m-%d").unwrap(),
-        parse_md(body),
-    );
-
-    Ok((s, post))
-}
-
-fn page(s: &str) -> IResult<&str, Page> {
-    let (s, _) = tag("---")(s)?;
-    let (s, _) = line_ending(s)?;
-    let (s, title) = title(s)?;
-    let (s, created_on) = created_on(s)?;
-    let (s, _) = tag("---")(s)?;
-    let (s, body) = rest(s)?;
-
-    let page = Page::new(
-        title,
-        chrono::NaiveDate::parse_from_str(created_on, "%Y-%m-%d").unwrap(),
-        parse_md(body),
-    );
-
-    Ok((s, page))
+    Ok(Page {
+        title: captures.name("title").unwrap().as_str(),
+        // unused:
+        // _created_on: chrono::NaiveDate::parse_from_str(&captures["created_on"], "%Y-%m-%d")?,
+        body: parse_md(&captures["body"]),
+    })
 }
 
 fn get_markdown_files(path: &Path) -> Result<glob::Paths, glob::PatternError> {
     let mdpath = path.join("**/*.md");
-    let mdpathstr = mdpath.to_str().unwrap();
+    let mdpathstr = mdpath
+        .to_str()
+        .expect("must be able to convert path to str");
     glob(mdpathstr)
 }
 
-const PAGE: &str = r###"
-<div>
-  <h1>{{title}}</h1>
-  <div class="page">{{content}}</div>
-</div>
-"###;
+macro_rules! layout {
+    ($title:expr, $content:expr) => {
+        html! {
+            (DOCTYPE)
+            head {
+                meta charset="utf-8";
+                meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible";
+                title { ($title) }
+                meta content="width=device-width" name="viewport";
+                link rel="icon" href="favicon-min.png" type="image.png";
+            }
+            body {
+                div.container {
+                    div.site {
+                        div.header {
+                            h1.title {
+                                a href="index.html" {
+                                    "Clark Kampfe"
+                                }
+                            }
 
-const POST: &str = r###"
-<div>
-    <h2>{{title}}</h2>
-    <p class="meta">{{created}}</p>
-    <div class="post">{{content}}</div>
-</div>
-"###;
+                            a.extra href="about.html" {
+                                "about"
+                            }
+                            " "
+                            a.extra href="resume.html" {
+                                "resumé"
+                            }
+                        }
+                        ($content)
+                        div.footer {
+                            div.contact {
+                                p {
+                                    a href="https://github.com/ckampfe/" {
+                                        "github"
+                                    }
+                                    " "
+                                    a href="https://twitter.com/clarkkampfe" {
+                                        "twitter"
+                                    }
+                                    " "
+                                    a href="/feed" {
+                                        "rss"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
 
-const INDEX_LINK: &str = r###"
-<li>
-  <a href="{{filename}}">{{title}}</a>
-  <span>{{created_at}}</span>
-</li>
-"###;
+fn page(title: &str, content: &str) -> Markup {
+    layout!(
+        title,
+        html! {
+            div {
+                h1 { (title) }
+                div.page { (PreEscaped(content)) }
+            }
+        }
+    )
+}
 
-const INDEX: &str = r###"
-<div id="home">
-  <ul class="posts">
-  {% for post_link in post_links %}
-    {{post_link}}
-  {% endfor %}
-  </ul>
-</div>
-"###;
+fn post(title: &str, created: &str, content: &str) -> Markup {
+    layout!(
+        title,
+        html! {
+            div {
+                h2 { (PreEscaped(title)) }
+                p.meta { (created) }
+                div.post { (PreEscaped(content)) }
+            }
+        }
+    )
+}
 
-const LAYOUT: &str = r###"
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
-    <title>
-      {{title}}
-    </title>
-    <meta content="width=device-width" name="viewport">
-    <link rel="icon" href="favicon-min.png" type="image/png" />
-  </head>
-  <body>
-    <div class="container">
-      <div class="site">
-        <div class="header">
-          <h1 class="title">
-            <a href="index.html">Clark Kampfe</a>
-          </h1>
-          <a class="extra" href="about.html">about</a>
-          <a class="extra" href="resume.html">resumé</a>
-        </div>
-        {{content}}
-        <div class="footer">
-          <div class="contact">
-            <p>
-              <a href="https://github.com/ckampfe/">github</a>
-              <a href="https://twitter.com/clarkkampfe">twitter</a>
-              <a href="/feed">rss</a>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>
-"###;
+fn index_link(filename: &str, title: &str, created_at: &str) -> Markup {
+    html! {
+        li {
+            a href=(filename) {
+                (PreEscaped(title))
+            }
+            " "
+            span {
+                (created_at)
+            }
+        }
+    }
+}
+
+fn index(post_links: &[Markup]) -> Markup {
+    layout!(
+        "Clark Kampfe - zeroclarkthirty.com",
+        html! {
+            div #home {
+                ul.posts {
+                    @for post_link in post_links {
+                        (post_link)
+                    }
+                }
+            }
+        }
+    )
+}
 
 fn rss_feed() -> rss::Channel {
     ChannelBuilder::default()
@@ -184,7 +200,7 @@ fn rss_feed() -> rss::Channel {
 }
 
 fn rss_item(post: Post, link: &str) -> rss::Item {
-    let t = chrono::NaiveTime::from_hms_milli(0, 0, 0, 0);
+    let t = chrono::NaiveTime::from_hms_milli_opt(0, 0, 0, 0).unwrap();
     let dt =
         chrono::DateTime::<Utc>::from_utc(post.created_on.and_time(t), chrono::Utc).to_rfc2822();
     ItemBuilder::default()
@@ -199,16 +215,6 @@ fn main() -> Result<()> {
     let cwd = std::env::current_dir().context("Could not get current working directory")?;
     let build_dir = cwd.join("build");
     std::fs::create_dir_all(&build_dir).context("Could not create build dir")?;
-
-    let mut reg = Tera::default();
-    reg.add_raw_templates([
-        ("layout", &LAYOUT),
-        ("index_link", &INDEX_LINK),
-        ("index", &INDEX),
-        ("post", &POST),
-        ("page", &PAGE),
-    ])
-    .with_context(|| "Could not register templates")?;
 
     let post_paths = get_markdown_files(&cwd.join("posts"))
         .with_context(|| "Could not get markdown files for posts")?
@@ -226,44 +232,37 @@ fn main() -> Result<()> {
         paths_and_content.push((post_path, content));
     }
 
-    let mut paths_and_posts: Vec<(&PathBuf, Post)> = paths_and_content
-        .iter()
-        .map(|(post_path, content)| {
-            let post = post(content).unwrap().1;
-            (post_path, post)
-        })
-        .collect::<Vec<(&PathBuf, Post)>>();
+    let mut paths_and_posts = Vec::with_capacity(paths_and_content.len());
+
+    for (post_path, content) in &paths_and_content {
+        let post = parse_post(content)?;
+        paths_and_posts.push((post_path, post))
+    }
 
     paths_and_posts.sort_unstable_by(|a, b| b.1.created_on.cmp(&a.1.created_on));
 
+    let mut post_output_path = PathBuf::new();
+
     for (post_path, post) in paths_and_posts {
-        let mut post_data = tera::Context::new();
-        let mut layout_data = tera::Context::new();
-        let mut index_link_data = tera::Context::new();
-
         let post_created_on = &post.created_on.format("%Y-%m-%d");
-        post_data.insert("title", post.title);
-        post_data.insert("created", &post_created_on.to_string());
-        post_data.insert("content", &post.body);
-        let post_html = reg.render("post", &post_data)?;
 
-        layout_data.insert("title", post.title);
-        layout_data.insert("content", &post_html);
-        let post_layout_html = reg.render("layout", &layout_data)?;
+        let post_layout_html = crate::post(post.title, &post_created_on.to_string(), &post.body);
 
         let filename = post_path
             .file_name()
             .expect("Could not make post path into str");
 
-        let mut post_output_path = PathBuf::new();
+        post_output_path.clear();
         post_output_path.push(&build_dir);
         post_output_path.push(filename);
         post_output_path.set_extension("html");
+
         let mut post_output = std::fs::File::create(&post_output_path).with_context(|| {
             format!("Could not create post output path: {:?}", &post_output_path)
         })?;
+
         post_output
-            .write_all(post_layout_html.as_bytes())
+            .write_all(post_layout_html.into_string().as_bytes())
             .with_context(|| {
                 format!(
                     "Could not write post output html to {:?}",
@@ -279,10 +278,12 @@ fn main() -> Result<()> {
         let index_link_post_str = index_link_post_path
             .to_str()
             .expect("Could not create filename from osstr");
-        index_link_data.insert("title", post.title);
-        index_link_data.insert("filename", index_link_post_str);
-        index_link_data.insert("created_at", &post_created_on.to_string());
-        let index_link_html = reg.render("index_link", &index_link_data)?;
+
+        let index_link_html = index_link(
+            index_link_post_str,
+            post.title,
+            &post_created_on.to_string(),
+        );
 
         index_links.push(index_link_html);
 
@@ -295,22 +296,14 @@ fn main() -> Result<()> {
         rss_items.push(post_rss_item);
     }
 
-    let mut index_data = tera::Context::default();
-
-    index_data.insert("post_links", &index_links);
-    let index_html = reg.render("index", &index_data)?;
-
-    let mut layout_data = tera::Context::default();
-    layout_data.insert("title", "Clark Kampfe - zeroclarkthirty.com");
-    layout_data.insert("content", &index_html);
-    let index_layout_html = reg.render("layout", &layout_data)?;
+    let index_layout_html = index(&index_links);
 
     let mut index_output_path = PathBuf::new();
     index_output_path.push(&build_dir);
     index_output_path.push("index");
     index_output_path.set_extension("html");
     let mut index_output = std::fs::File::create(index_output_path)?;
-    index_output.write_all(index_layout_html.as_bytes())?;
+    index_output.write_all(index_layout_html.into_string().as_bytes())?;
 
     feed.set_items(rss_items);
     let mut rss_feed_path = PathBuf::new();
@@ -326,23 +319,9 @@ fn main() -> Result<()> {
         let pp = page_path?;
         let contents =
             std::fs::read_to_string(&pp).with_context(|| format!("Could not read {:?}", pp))?;
-        let (_, page) = page(&contents).unwrap();
+        let page = parse_page(&contents)?;
 
-        let mut page_data = tera::Context::default();
-        let page_created_on = &page.created_on.format("%Y-%m-%d");
-        page_data.insert("title", page.title);
-        page_data.insert("created", &page_created_on.to_string());
-        page_data.insert("content", &page.body);
-        let page_html = reg
-            .render("page", &page_data)
-            .with_context(|| format!("Could not render page {:?}", pp))?;
-
-        let mut layout_data = tera::Context::default();
-        layout_data.insert("title", page.title);
-        layout_data.insert("content", &page_html);
-        let page_layout_html = reg
-            .render("layout", &layout_data)
-            .with_context(|| format!("Could not render layout {:?}", pp))?;
+        let page_layout_html = crate::page(page.title, &page.body);
 
         let filename = pp.file_name().expect("Could not make page path into str");
         let mut page_output_path = PathBuf::new();
@@ -352,9 +331,73 @@ fn main() -> Result<()> {
         let mut page_output = std::fs::File::create(&page_output_path)
             .with_context(|| format!("Could not create {:?}", page_output_path))?;
         page_output
-            .write_all(page_layout_html.as_bytes())
+            .write_all(page_layout_html.into_string().as_bytes())
             .with_context(|| format!("Could not write page to {:?}", page_output_path))?;
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn recognizes_a_post() {
+        let post_text = r"---
+layout: post
+title: some great title
+created: 2029-12-18
+---
+
+some incredible post body with
+multiple
+lines
+and paragraphs";
+
+        let p = crate::parse_post(post_text).unwrap();
+
+        assert_eq!(p.title, "some great title");
+        assert_eq!(
+            p.created_on,
+            chrono::NaiveDate::parse_from_str("2029-12-18", "%Y-%m-%d").unwrap(),
+        );
+        assert_eq!(
+            p.body,
+            crate::parse_md(
+                "some incredible post body with
+multiple
+lines
+and paragraphs"
+            )
+        )
+    }
+
+    #[test]
+    fn recognizes_a_page() {
+        let page_text = r"---
+title: some great title
+created: 2029-12-18
+---
+
+some incredible page body with
+multiple
+lines
+and paragraphs";
+
+        let p = crate::parse_page(page_text).unwrap();
+
+        assert_eq!(p.title, "some great title");
+        // assert_eq!(
+        //     p.created_on,
+        //     chrono::NaiveDate::parse_from_str("2029-12-18", "%Y-%m-%d").unwrap(),
+        // );
+        assert_eq!(
+            p.body,
+            crate::parse_md(
+                "some incredible page body with
+multiple
+lines
+and paragraphs"
+            )
+        )
+    }
 }

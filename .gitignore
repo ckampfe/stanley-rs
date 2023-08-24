@@ -3,3 +3,5 @@
 /posts
 /pages
 /build
+# Local Netlify folder
+.netlify
