@@ -26,7 +26,6 @@ static PAGE_REGEX: Lazy<Regex> = Lazy::new(|| {
     Regex::new(
         r"---
 title: (?P<title>.+)
-created: (?P<created_on>\d{4}-\d{2}-\d{2})
 ---
 (?s)
 (?P<body>.+)",
@@ -37,21 +36,19 @@ created: (?P<created_on>\d{4}-\d{2}-\d{2})
 struct Post<'a> {
     title: &'a str,
     created_on: chrono::NaiveDate,
-    body: String,
+    body: Markup,
 }
 
 struct Page<'a> {
     title: &'a str,
-    // this is unused
-    // _created_on: chrono::NaiveDate,
-    body: String,
+    body: Markup,
 }
 
-fn parse_md(markdown_str: &str) -> String {
+fn md_to_html(markdown_str: &str) -> Markup {
     let parser = Parser::new(markdown_str);
     let mut html_buf = String::new();
     html::push_html(&mut html_buf, parser);
-    html_buf
+    maud::PreEscaped(html_buf)
 }
 
 fn parse_post(s: &str) -> Result<Post> {
@@ -60,7 +57,7 @@ fn parse_post(s: &str) -> Result<Post> {
     Ok(Post {
         title: captures.name("title").unwrap().as_str(),
         created_on: chrono::NaiveDate::parse_from_str(&captures["created_on"], "%Y-%m-%d")?,
-        body: parse_md(&captures["body"]),
+        body: md_to_html(&captures["body"]),
     })
 }
 
@@ -69,9 +66,7 @@ fn parse_page(s: &str) -> Result<Page> {
 
     Ok(Page {
         title: captures.name("title").unwrap().as_str(),
-        // unused:
-        // _created_on: chrono::NaiveDate::parse_from_str(&captures["created_on"], "%Y-%m-%d")?,
-        body: parse_md(&captures["body"]),
+        body: md_to_html(&captures["body"]),
     })
 }
 
@@ -137,26 +132,26 @@ macro_rules! layout {
     };
 }
 
-fn page(title: &str, content: &str) -> Markup {
+fn page(title: &str, content: &Markup) -> Markup {
     layout!(
         title,
         html! {
             div {
                 h1 { (title) }
-                div.page { (PreEscaped(content)) }
+                div.page { (content) }
             }
         }
     )
 }
 
-fn post(title: &str, created: &str, content: &str) -> Markup {
+fn post(title: &str, created: &str, content: &Markup) -> Markup {
     layout!(
         title,
         html! {
             div {
                 h2 { (PreEscaped(title)) }
                 p.meta { (created) }
-                div.post { (PreEscaped(content)) }
+                div.post { (content) }
             }
         }
     )
@@ -201,12 +196,15 @@ fn rss_feed() -> rss::Channel {
 
 fn rss_item(post: Post, link: &str) -> rss::Item {
     let t = chrono::NaiveTime::from_hms_milli_opt(0, 0, 0, 0).unwrap();
-    let dt =
-        chrono::DateTime::<Utc>::from_utc(post.created_on.and_time(t), chrono::Utc).to_rfc2822();
+    let dt = chrono::DateTime::<Utc>::from_naive_utc_and_offset(
+        post.created_on.and_time(t),
+        chrono::Utc,
+    )
+    .to_rfc2822();
     ItemBuilder::default()
         .title(post.title.to_string())
         .link(link.to_owned())
-        .content(post.body)
+        .content(post.body.0)
         .pub_date(dt)
         .build()
 }
@@ -361,13 +359,14 @@ and paragraphs";
             chrono::NaiveDate::parse_from_str("2029-12-18", "%Y-%m-%d").unwrap(),
         );
         assert_eq!(
-            p.body,
-            crate::parse_md(
+            p.body.0,
+            crate::md_to_html(
                 "some incredible post body with
 multiple
 lines
 and paragraphs"
             )
+            .0
         )
     }
 
@@ -375,7 +374,6 @@ and paragraphs"
     fn recognizes_a_page() {
         let page_text = r"---
 title: some great title
-created: 2029-12-18
 ---
 
 some incredible page body with
@@ -386,18 +384,15 @@ and paragraphs";
         let p = crate::parse_page(page_text).unwrap();
 
         assert_eq!(p.title, "some great title");
-        // assert_eq!(
-        //     p.created_on,
-        //     chrono::NaiveDate::parse_from_str("2029-12-18", "%Y-%m-%d").unwrap(),
-        // );
         assert_eq!(
-            p.body,
-            crate::parse_md(
+            p.body.0,
+            crate::md_to_html(
                 "some incredible page body with
 multiple
 lines
 and paragraphs"
             )
+            .0
         )
     }
 }
