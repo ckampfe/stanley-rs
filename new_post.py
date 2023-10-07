@@ -26,5 +26,5 @@ post: str = "\n".join(frontmatter) + "\n\n\n"
 
 # only open the file for writing if it does not exist,
 # with "x" mode
-with open(f"{today_dashed}-{title_dashed}.md", "x") as f:
+with open(f"{today_dashed}-{title_dashed}.md", "x", encoding="utf-8") as f:
     f.write(post)
