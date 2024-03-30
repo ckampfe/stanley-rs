@@ -2,36 +2,12 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use glob::glob;
 use maud::{html, Markup, PreEscaped, DOCTYPE};
-use once_cell::sync::Lazy;
 use pulldown_cmark::{html, Parser};
 use regex::Regex;
 use rss::{ChannelBuilder, ItemBuilder};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-
-static POST_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(
-        r"---
-layout: post
-title: (?P<title>.+)
-created: (?P<created_on>\d{4}-\d{2}-\d{2})
----
-(?s)
-(?P<body>.*)",
-    )
-    .unwrap()
-});
-
-static PAGE_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(
-        r"---
-title: (?P<title>.+)
----
-(?s)
-(?P<body>.+)",
-    )
-    .unwrap()
-});
+use std::sync::OnceLock;
 
 struct Post<'a> {
     title: &'a str,
@@ -52,7 +28,22 @@ fn md_to_html(markdown_str: &str) -> Markup {
 }
 
 fn parse_post(s: &str) -> Result<Post> {
-    let captures = POST_REGEX.captures(s).unwrap();
+    static POST_REGEX: std::sync::OnceLock<Regex> = OnceLock::new();
+
+    POST_REGEX.get_or_init(|| {
+        Regex::new(
+            r"---
+layout: post
+title: (?P<title>.+)
+created: (?P<created_on>\d{4}-\d{2}-\d{2})
+---
+(?s)
+(?P<body>.*)",
+        )
+        .unwrap()
+    });
+
+    let captures = POST_REGEX.get().unwrap().captures(s).unwrap();
 
     Ok(Post {
         title: captures.name("title").unwrap().as_str(),
@@ -62,7 +53,20 @@ fn parse_post(s: &str) -> Result<Post> {
 }
 
 fn parse_page(s: &str) -> Result<Page> {
-    let captures = PAGE_REGEX.captures(s).unwrap();
+    static PAGE_REGEX: OnceLock<Regex> = OnceLock::new();
+
+    PAGE_REGEX.get_or_init(|| {
+        Regex::new(
+            r"---
+title: (?P<title>.+)
+---
+(?s)
+(?P<body>.+)",
+        )
+        .unwrap()
+    });
+
+    let captures = PAGE_REGEX.get().unwrap().captures(s).unwrap();
 
     Ok(Page {
         title: captures.name("title").unwrap().as_str(),
