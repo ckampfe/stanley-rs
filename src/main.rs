@@ -214,6 +214,8 @@ fn rss_item(post: Post, link: &str) -> rss::Item {
 }
 
 fn main() -> Result<()> {
+    let mut conn = rusqlite::Connection::open("zct.db")?;
+
     let cwd = std::env::current_dir().context("Could not get current working directory")?;
     let build_dir = cwd.join("build");
     std::fs::create_dir_all(&build_dir).context("Could not create build dir")?;
@@ -245,7 +247,40 @@ fn main() -> Result<()> {
 
     let mut post_output_path = PathBuf::new();
 
+    let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+    tx.execute(
+        "create table if not exists posts (id integer primary key, title text, body text, created_on text)",
+        [],
+    )?;
+    tx.execute(
+        "create unique index if not exists posts_title_created_on on posts (title, created_on)",
+        [],
+    )?;
+
+    tx.execute(
+        "create virtual table if not exists posts_search using fts5(title, body, created_on)",
+        [],
+    )?;
+
+    tx.execute("create trigger if not exists posts_fts5
+    after insert on posts
+    for each row
+    begin
+        insert into posts_search (title, body, created_on) values (new.title, new.body, new.created_on);
+    end;
+    ", [])?;
+
     for (post_path, post) in paths_and_posts {
+        tx.execute(
+            "insert into posts (title, body, created_on) values (?, ?, ?) on conflict (title, created_on) do update set body = excluded.body",
+            rusqlite::params![
+                &post.title,
+                html2text::from_read(post.body.clone().into_string().as_bytes(), 150),
+                // &post.body.clone().into_string(),
+                &post.created_on.to_string()
+            ],
+        )?;
+
         let post_created_on = &post.created_on.format("%Y-%m-%d");
 
         let post_layout_html = crate::post(post.title, &post_created_on.to_string(), &post.body);
@@ -317,6 +352,16 @@ fn main() -> Result<()> {
 
     let page_paths = get_markdown_files(&cwd.join("pages"))?;
 
+    tx.execute(
+        "create table if not exists pages (id integer primary key, title text, body text)",
+        [],
+    )?;
+
+    tx.execute(
+        "create unique index if not exists pages_title on pages (title)",
+        [],
+    )?;
+
     for page_path in page_paths {
         let pp = page_path?;
         let contents =
@@ -324,6 +369,11 @@ fn main() -> Result<()> {
         let page = parse_page(&contents)?;
 
         let page_layout_html = crate::page(page.title, &page.body);
+
+        tx.execute(
+            "insert into pages (title, body) values (?, ?) on conflict (title) do update set body = excluded.body",
+            rusqlite::params![page.title, page.body.clone().into_string()],
+        )?;
 
         let filename = pp.file_name().expect("Could not make page path into str");
         let mut page_output_path = PathBuf::new();
@@ -336,6 +386,8 @@ fn main() -> Result<()> {
             .write_all(page_layout_html.into_string().as_bytes())
             .with_context(|| format!("Could not write page to {:?}", page_output_path))?;
     }
+
+    tx.commit()?;
 
     Ok(())
 }

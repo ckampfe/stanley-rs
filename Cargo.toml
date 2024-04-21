@@ -8,6 +8,7 @@ edition = "2021"
 anyhow = "1"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 glob = "0.3"
+html2text = "0.12"
 maud = "0.26"
 pulldown-cmark = { version = "0.10", default-features = false, features = [
     "html",
@@ -15,6 +16,7 @@ pulldown-cmark = { version = "0.10", default-features = false, features = [
 ] }
 regex = "1.10"
 rss = "2.0"
+rusqlite = { version = "0.31" }
 
 [profile.release]
 codegen-units = 1
