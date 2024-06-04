@@ -107,6 +107,10 @@ macro_rules! layout {
                                 "about"
                             }
                             " "
+                            a.extra href="projects.html" {
+                                "projects"
+                            }
+                            " "
                             a.extra href="resume.html" {
                                 "resumé"
                             }
