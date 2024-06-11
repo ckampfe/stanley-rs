@@ -110,10 +110,6 @@ macro_rules! layout {
                             a.extra href="projects.html" {
                                 "projects"
                             }
-                            " "
-                            a.extra href="resume.html" {
-                                "resumé"
-                            }
                         }
                         ($content)
                         div.footer {
