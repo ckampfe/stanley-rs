@@ -86,46 +86,53 @@ macro_rules! layout {
     ($title:expr, $content:expr) => {
         html! {
             (DOCTYPE)
-            head {
-                meta charset="utf-8";
-                meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible";
-                title { ($title) }
-                meta content="width=device-width" name="viewport";
-                link rel="icon" href="favicon-min.png" type="image.png";
-            }
-            body {
-                div.container {
-                    div.site {
-                        div.header {
-                            h1.title {
+            html lang="en" {
+                head {
+                    meta charset="utf-8";
+                    meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible";
+                    title { ($title) }
+                    meta name="description" content="Clark Kampfe - zeroclarkthirty.com";
+                    meta content="width=device-width" name="viewport";
+                    link rel="icon" href="favicon-min.png" type="image.png";
+                    link rel="stylesheet" href="missing.min.css?version=1.1.3";
+                    style {
+                        r#":root { --main-font: serif; --secondary-font: sans-serif; --display-font: sans-serif; }
+                        tbody tr:nth-child(odd) { background: var(--box-bg); }
+                        "#
+                    }
+                }
+                body class="margin center" {
+                    div {
+                        header style="border-block-end: 2px dotted var(--graphical-fg);" {
+                            h1 {
                                 a href="index.html" {
                                     "Clark Kampfe"
                                 }
                             }
 
-                            a.extra href="about.html" {
-                                "about"
-                            }
-                            " "
-                            a.extra href="projects.html" {
-                                "projects"
+                            nav class="contents" aria-label="Site sections" {
+                                a href="about.html" {
+                                    "about"
+                                }
+                                " "
+                                a href="projects.html" {
+                                    "projects"
+                                }
                             }
                         }
                         ($content)
-                        div.footer {
-                            div.contact {
-                                p {
-                                    a href="https://github.com/ckampfe/" {
-                                        "github"
-                                    }
-                                    " "
-                                    a href="https://twitter.com/clarkkampfe" {
-                                        "twitter"
-                                    }
-                                    " "
-                                    a href="/feed" {
-                                        "rss"
-                                    }
+                        div {
+                            p {
+                                a href="https://github.com/ckampfe/" {
+                                    "github"
+                                }
+                                " "
+                                a href="https://twitter.com/clarkkampfe" {
+                                    "twitter"
+                                }
+                                " "
+                                a href="/feed" {
+                                    "rss"
                                 }
                             }
                         }
@@ -142,7 +149,7 @@ fn page(title: &str, content: &Markup) -> Markup {
         html! {
             div {
                 h1 { (title) }
-                div.page { (content) }
+                div { (content) }
             }
         }
     )
@@ -154,8 +161,8 @@ fn post(title: &str, created: &str, content: &Markup) -> Markup {
         html! {
             div {
                 h2 { (PreEscaped(title)) }
-                p.meta { (created) }
-                div.post { (content) }
+                p { (created) }
+                div { (content) }
             }
         }
     )
@@ -163,12 +170,13 @@ fn post(title: &str, created: &str, content: &Markup) -> Markup {
 
 fn index_link(filename: &str, title: &str, created_at: &str) -> Markup {
     html! {
-        li {
-            a href=(filename) {
-                (PreEscaped(title))
+        tr {
+            td {
+                a href=(filename) {
+                    (PreEscaped(title))
+                }
             }
-            " "
-            span {
+            td {
                 (created_at)
             }
         }
@@ -179,8 +187,8 @@ fn index(post_links: &[Markup]) -> Markup {
     layout!(
         "Clark Kampfe - zeroclarkthirty.com",
         html! {
-            div #home {
-                ul.posts {
+            table style="font-family: sans-serif;" {
+                tbody style="border-block: none;" {
                     @for post_link in post_links {
                         (post_link)
                     }
