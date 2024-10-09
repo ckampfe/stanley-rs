@@ -94,12 +94,11 @@ macro_rules! layout {
                     meta name="description" content="Clark Kampfe - zeroclarkthirty.com";
                     meta content="width=device-width" name="viewport";
                     link rel="icon" href="favicon-min.png" type="image.png";
-                    link rel="stylesheet" href="missing.min.css?version=1.1.3";
                     style {
-                        r#":root { --main-font: serif; --secondary-font: sans-serif; --display-font: sans-serif; }
-                        tbody tr:nth-child(odd) { background: var(--box-bg); }
-                        "#
+                        "html{visibility: hidden;opacity:0;}"
                     }
+                    link rel="stylesheet" href="missing.min.css?version=1.1.3" type="text/css";
+                    link rel="stylesheet" href="style.css" type="text/css";
                 }
                 body class="margin center" {
                     div {
