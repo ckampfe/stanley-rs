@@ -119,7 +119,9 @@ macro_rules! layout {
                                 }
                             }
                         }
-                        ($content)
+                        main {
+                            ($content)
+                        }
                         div {
                             p {
                                 a href="https://github.com/ckampfe/" {
