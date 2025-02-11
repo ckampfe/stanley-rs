@@ -95,7 +95,9 @@ macro_rules! layout {
                     meta content="width=device-width" name="viewport";
                     link rel="icon" href="favicon-min.png" type="image.png";
                     style {
-                        "html{visibility: hidden;opacity:0;}"
+                        "html{visibility: hidden;opacity:0;}
+                        body{font-family: system-ui;}
+                        "
                     }
                     link rel="stylesheet" href="missing.min.css?version=1.1.3" type="text/css";
                     link rel="stylesheet" href="style.css" type="text/css";
