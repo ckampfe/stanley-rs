@@ -130,10 +130,6 @@ macro_rules! layout {
                                     "github"
                                 }
                                 " "
-                                a href="https://twitter.com/clarkkampfe" {
-                                    "twitter"
-                                }
-                                " "
                                 a href="/feed" {
                                     "rss"
                                 }
