@@ -237,7 +237,7 @@ fn main() -> Result<()> {
     for post_path in post_paths {
         let post_path = post_path?;
         let content = std::fs::read_to_string(&post_path)
-            .with_context(|| format!("Could not read post {:?}", post_path))?;
+            .with_context(|| format!("Could not read post {post_path:?}"))?;
         paths_and_content.push((post_path, content));
     }
 
@@ -327,7 +327,7 @@ fn main() -> Result<()> {
     for page_path in page_paths {
         let pp = page_path?;
         let contents =
-            std::fs::read_to_string(&pp).with_context(|| format!("Could not read {:?}", pp))?;
+            std::fs::read_to_string(&pp).with_context(|| format!("Could not read {pp:?}"))?;
         let page = parse_page(&contents)?;
 
         let page_layout_html = crate::page(page.title, &page.body);
@@ -338,10 +338,10 @@ fn main() -> Result<()> {
         page_output_path.push(filename);
         page_output_path.set_extension("html");
         let mut page_output = std::fs::File::create(&page_output_path)
-            .with_context(|| format!("Could not create {:?}", page_output_path))?;
+            .with_context(|| format!("Could not create {page_output_path:?}"))?;
         page_output
             .write_all(page_layout_html.into_string().as_bytes())
-            .with_context(|| format!("Could not write page to {:?}", page_output_path))?;
+            .with_context(|| format!("Could not write page to {page_output_path:?}"))?;
     }
 
     Ok(())
