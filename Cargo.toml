@@ -2,7 +2,7 @@
 name = "stanley-rs"
 version = "0.1.0"
 authors = ["Clark Kampfe <clark.kampfe@gmail.com>"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 anyhow = "1"
