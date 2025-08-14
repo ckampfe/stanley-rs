@@ -27,7 +27,7 @@ fn md_to_html(markdown_str: &str) -> Markup {
     maud::PreEscaped(html_buf)
 }
 
-fn parse_post(s: &str) -> Result<Post> {
+fn parse_post(s: &str) -> Result<Post<'_>> {
     static POST_REGEX: std::sync::OnceLock<Regex> = OnceLock::new();
 
     POST_REGEX.get_or_init(|| {
@@ -52,7 +52,7 @@ created: (?P<created_on>\d{4}-\d{2}-\d{2})
     })
 }
 
-fn parse_page(s: &str) -> Result<Page> {
+fn parse_page(s: &str) -> Result<Page<'_>> {
     static PAGE_REGEX: OnceLock<Regex> = OnceLock::new();
 
     PAGE_REGEX.get_or_init(|| {
