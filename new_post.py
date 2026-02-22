@@ -1,4 +1,9 @@
 #!/usr/bin/env -S uv run --script
+#
+# /// script
+# requires-python = ">=3.6"
+# dependencies = []
+# ///
 
 from datetime import date
 import sys
@@ -14,15 +19,13 @@ title_spaced: str = " ".join(title_raw)
 title_dashed: str = "-".join(title_raw)
 today_dashed: str = today.strftime("%Y-%m-%d")
 
-frontmatter: list[str] = [
-    "---",
-    "layout: post",
-    f"title: {title_spaced}",
-    f"created: {today_dashed}",
-    "---",
-]
+post = f"""---
+layout: post
+title: {title_spaced}
+created: {today_dashed}
+---
 
-post: str = "\n".join(frontmatter) + "\n\n\n"
+"""
 
 # only open the file for writing if it does not exist,
 # with "x" mode
