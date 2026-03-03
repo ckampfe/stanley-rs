@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use glob::glob;
-use maud::{html, Markup, PreEscaped, DOCTYPE};
-use pulldown_cmark::{html, Parser};
+use maud::{DOCTYPE, Markup, PreEscaped, html};
+use pulldown_cmark::{Parser, html};
 use regex::Regex;
 use rss::{ChannelBuilder, ItemBuilder};
 use std::io::Write;
@@ -99,40 +99,37 @@ macro_rules! layout {
                         body{font-family: system-ui;}
                         "
                     }
-                    link rel="stylesheet" href="missing.min.css?version=1.1.3" type="text/css";
+                    link rel="stylesheet" href="missing.min.css?version=1.2.0" type="text/css";
                     link rel="stylesheet" href="style.css" type="text/css";
                 }
-                body class="margin center" {
-                    div {
-                        header style="border-block-end: 2px dotted var(--graphical-fg);" {
+                body class="center" {
+                    header style="display: flex; align-items: center; gap: 0.7rem; border-block-end: 2px dotted var(--graphical-fg);" {
+                        nav class="contents navbar" aria-label="Site sections" {
                             h1 {
                                 a href="index.html" {
                                     "Clark Kampfe"
                                 }
                             }
-
-                            nav class="contents" aria-label="Site sections" {
-                                a href="about.html" {
-                                    "about"
-                                }
-                                " "
-                                a href="projects.html" {
-                                    "projects"
-                                }
+                            a href="about.html" {
+                                "about"
+                            }
+                            " "
+                            a href="projects.html" {
+                                "projects"
                             }
                         }
-                        main {
-                            ($content)
-                        }
-                        div {
-                            p {
-                                a href="https://github.com/ckampfe/" {
-                                    "github"
-                                }
-                                " "
-                                a href="/feed" {
-                                    "rss"
-                                }
+                    }
+                    main class="center" {
+                        ($content)
+                    }
+                    footer style="border-block-start: 2px dotted var(--graphical-fg);" {
+                        p {
+                            a href="https://github.com/ckampfe/" {
+                                "github"
+                            }
+                            " "
+                            a href="/feed" {
+                                "rss"
                             }
                         }
                     }
@@ -170,12 +167,12 @@ fn post(title: &str, created: &str, content: &Markup) -> Markup {
 fn index_link(filename: &str, title: &str, created_at: &str) -> Markup {
     html! {
         tr {
-            td {
+            td class="padding" style="width: 70%;" {
                 a href=(filename) {
                     (PreEscaped(title))
                 }
             }
-            td {
+            td class="padding" style="width: 30%; text-align: right;" {
                 (created_at)
             }
         }
@@ -186,7 +183,7 @@ fn index(post_links: &[Markup]) -> Markup {
     layout!(
         "Clark Kampfe - zeroclarkthirty.com",
         html! {
-            table style="font-family: sans-serif;" {
+            table style="font-family: sans-serif; --density: 0.3;" {
                 tbody style="border-block: none;" {
                     @for post_link in post_links {
                         (post_link)
