@@ -117,6 +117,9 @@ macro_rules! layout {
                             a href="projects.html" {
                                 "projects"
                             }
+                            a href="mermaid.html" {
+                                "mermaid diagram editor"
+                            }
                         }
                     }
                     main class="center" {
