@@ -245,7 +245,7 @@ fn main() -> Result<()> {
         paths_and_posts.push((post_path, post))
     }
 
-    paths_and_posts.sort_unstable_by(|a, b| b.1.created_on.cmp(&a.1.created_on));
+    paths_and_posts.sort_unstable_by_key(|b| std::cmp::Reverse(b.1.created_on));
 
     let mut post_output_path = PathBuf::new();
 
@@ -264,16 +264,13 @@ fn main() -> Result<()> {
         post_output_path.set_extension("html");
 
         let mut post_output = std::fs::File::create(&post_output_path).with_context(|| {
-            format!("Could not create post output path: {:?}", &post_output_path)
+            format!("Could not create post output path: {:?}", post_output_path)
         })?;
 
         post_output
             .write_all(post_layout_html.into_string().as_bytes())
             .with_context(|| {
-                format!(
-                    "Could not write post output html to {:?}",
-                    &post_output_path
-                )
+                format!("Could not write post output html to {:?}", post_output_path)
             })?;
 
         let mut index_link_post_path = PathBuf::new();
